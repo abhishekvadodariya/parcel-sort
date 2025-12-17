@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scale Space Parcel Sort</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #111827; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .phase-a { border-left: 8px solid #2563EB; background: rgba(37, 99, 235, 0.1); }
+        .phase-b { border-left: 8px solid #16A34A; background: rgba(22, 163, 74, 0.1); }
+        .phase-c { border-left: 8px solid #EA580C; background: rgba(234, 88, 12, 0.1); }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="sticky top-0 bg-gray-900 pb-4 z-50">
+        <div class="flex justify-between items-center mb-2">
+            <h1 class="text-xl font-bold text-gray-400">Scale Space Parcels</h1>
+            <span class="text-xs bg-gray-800 px-2 py-1 rounded text-gray-500" id="count">0 Companies</span>
+        </div>
+        <input type="text" id="searchInput" placeholder="Type name (e.g. 'dna', 'mod', 'lab')..." 
+               class="w-full p-4 rounded-xl bg-gray-800 border border-gray-700 text-white text-lg focus:outline-none focus:border-blue-500 shadow-lg" autocomplete="off">
+    </div>
+
+    <div id="results" class="space-y-3 pb-10">
+        <div class="text-center text-gray-600 mt-10">
+            <p>Ready to search.</p>
+            <p class="text-sm mt-2">Type "LAB" to see all laboratories.</p>
+        </div>
+    </div>
+
+    <script>
+        // --- MASTER DATABASE (Add new companies here) ---
+        const companies = [
+            // PHASE A (The Purple/Blue Zone)
+            { name: "DNAe", aliases: ["DNA Electronics", "DNA Diagnostics", "DNAe Oncology"], phase: "A", floor: "2 & 3", type: "LAB", note: "Loading Bay A" },
+            { name: "Carbon Clean", aliases: ["CCS", "Carbon Clean Solutions"], phase: "A", floor: "2", type: "Office", note: "" },
+            { name: "Blenheim Chalcot", aliases: ["BC", "BC Management"], phase: "A", floor: "1", type: "Office", note: "" },
+            { name: "Imperial Business School", aliases: ["I-Hub", "Imperial College", "ICL"], phase: "A", floor: "Ground", type: "Office", note: "Reception" },
+            { name: "Adlisys", aliases: [], phase: "A", floor: "1", type: "Office", note: "" },
+            { name: "BCI Capital", aliases: [], phase: "A", floor: "1", type: "Office", note: "" },
+            
+            // PHASE B (The Green Zone)
+            { name: "Vector Builder", aliases: ["VectorBuilder"], phase: "B", floor: "Ground", type: "LAB", note: "Loading Bay A" },
+            { name: "British Asian Trust", aliases: ["BAT"], phase: "B", floor: "Ground", type: "Office", note: "" },
+            { name: "Puraffinity", aliases: [], phase: "B", floor: "2 & 3", type: "LAB", note: "Loading Bay A" },
+            { name: "CTLS", aliases: [], phase: "B", floor: "2", type: "LAB", note: "" },
+            { name: "Fabrix Studios", aliases: ["Fabric"], phase: "B", floor: "Ground", type: "Office", note: "" },
+            { name: "Avado", aliases: [], phase: "B", floor: "1", type: "Office", note: "" },
+            { name: "Fospha", aliases: [], phase: "B", floor: "1", type: "Office", note: "" },
+            { name: "Hive Learning", aliases: [], phase: "B", floor: "1", type: "Office", note: "" },
+            { name: "Salary Finance", aliases: [], phase: "B", floor: "1", type: "Office", note: "" },
+            { name: "Accelerate People", aliases: [], phase: "B", floor: "1", type: "Office", note: "" },
+
+            // PHASE C (The Orange Zone)
+            { name: "Modulr", aliases: ["Modulr Finance", "Modulr Payments"], phase: "C", floor: "1", type: "Office", note: "" },
+            { name: "Cipher X", aliases: ["CipherX"], phase: "C", floor: "2", type: "LAB", note: "Loading Bay A" },
+            { name: "Resurrect Bio", aliases: ["Resurrect"], phase: "C", floor: "2", type: "LAB", note: "Loading Bay A" },
+            { name: "Liberis", aliases: [], phase: "C", floor: "Ground", type: "Office", note: "" },
+            { name: "Sifr Bio", aliases: [], phase: "C", floor: "2", type: "LAB", note: "" },
+            { name: "Sparta Biotechnology", aliases: [], phase: "C", floor: "2", type: "LAB", note: "" },
+            { name: "T-Cycler", aliases: ["T-Cycles"], phase: "C", floor: "2", type: "LAB", note: "" }
+        ];
+
+        // --- APP LOGIC ---
+        const input = document.getElementById('searchInput');
+        const results = document.getElementById('results');
+        document.getElementById('count').innerText = companies.length + " Companies";
+
+        input.addEventListener('keyup', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            results.innerHTML = '';
+
+            if (query.length === 0) {
+                results.innerHTML = '<div class="text-center text-gray-600 mt-10"><p>Ready to search.</p></div>';
+                return;
+            }
+
+            const matches = companies.filter(c => {
+                return c.name.toLowerCase().includes(query) || 
+                       c.aliases.some(a => a.toLowerCase().includes(query)) ||
+                       c.type.toLowerCase().includes(query); // Allows searching for "LAB"
+            });
+
+            if (matches.length === 0) {
+                results.innerHTML = '<div class="text-center text-gray-500 mt-10">No company found.</div>';
+                return;
+            }
+
+            matches.forEach(item => {
+                // Determine CSS class based on Phase
+                let cssClass = 'bg-gray-800';
+                let badgeColor = 'bg-gray-600';
+                if (item.phase === 'A') { cssClass = 'phase-a'; badgeColor = 'bg-blue-600'; }
+                if (item.phase === 'B') { cssClass = 'phase-b'; badgeColor = 'bg-green-600'; }
+                if (item.phase === 'C') { cssClass = 'phase-c'; badgeColor = 'bg-orange-600'; }
+
+                const html = `
+                    <div class="${cssClass} p-4 rounded-xl flex justify-between items-start shadow-md cursor-pointer" onclick="copyToClipboard('${item.phase}', '${item.floor}')">
+                        <div>
+                            <h2 class="text-xl font-bold text-white">${item.name}</h2>
+                            <p class="text-sm text-gray-400 mt-1">${item.aliases.join(', ')}</p>
+                            ${item.type === 'LAB' ? '<span class="inline-block mt-2 px-2 py-0.5 rounded text-xs font-bold bg-purple-900 text-purple-200">LAB</span>' : ''}
+                            ${item.note ? `<span class="inline-block mt-2 px-2 py-0.5 rounded text-xs font-bold bg-gray-700 text-gray-300">${item.note}</span>` : ''}
+                        </div>
+                        <div class="text-right">
+                            <span class="${badgeColor} text-white px-3 py-1 rounded text-xl font-bold block mb-1">PHASE ${item.phase}</span>
+                            <span class="text-gray-300 font-mono text-lg">Floor ${item.floor}</span>
+                        </div>
+                    </div>
+                `;
+                results.innerHTML += html;
+            });
+        });
+
+        function copyToClipboard(phase, floor) {
+            // Optional: visual feedback or auto-copy logic
+            input.value = "";
+            input.placeholder = `Last: Phase ${phase} - Floor ${floor}`;
+            input.focus();
+        }
+    </script>
+</body>
+</html>
